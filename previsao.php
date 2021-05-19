@@ -1,8 +1,11 @@
 <?php
 
-require_once("includes/config.php");
+require_once("includes/connection.php");
 
-$salvar = false;
+$conect = conexaoMysql();
+
+$salvar = true;
+$log = false;
 
 $anoAnterior = date('Y') - 1;
 $anoAtual = date('Y');
@@ -20,7 +23,7 @@ $dataFim = "$anoAtual-$mes-" . cal_days_in_month(CAL_GREGORIAN, $mes, $proximoAn
 // $dataFim = $anoAtual . "-" . "01" . "-" . "30";
 
 
-$sql = "SELECT tbl_finalizado.*, operadora.titulo as nome_operadora FROM tbl_finalizado inner join tbl_operadora as operadora on tbl_finalizado.id_operadora = operadora.id  where (data_pagamento is not null or data_previsao_pagamento is not null) and vitalicio = 0 and id_operadora = 2  order by id desc;";
+$sql = "SELECT tbl_finalizado.*, operadora.titulo as nome_operadora FROM tbl_finalizado inner join tbl_operadora as operadora on tbl_finalizado.id_operadora = operadora.id  where (data_pagamento is not null or data_previsao_pagamento is not null) and vitalicio = 0 and id_operadora > 0  order by id desc;";
 
 // echo "$sql\n";
 
@@ -29,7 +32,7 @@ $nrows = mysqli_num_rows($result);
 $countNrows = 1;
 while ($rs = mysqli_fetch_assoc($result)) {
 
-    echo "$countNrows/$nrows\n";
+    echo "\n$countNrows/$nrows\n";
     $countNrows++;
 
     $data_previsao_pagamento = $rs['data_previsao_pagamento'];
@@ -128,17 +131,22 @@ while ($rs = mysqli_fetch_assoc($result)) {
         $id_tipo_comissao_corretor = 1;
     }
 
-    echo "RAZAO SOCIAL: $descricao ** OPERADORA: ($id_operadora)\n idFinalizado: $id_finalizado ** Data Pagamento: $data_pagamento\n";
+    echo "RAZÃO SOCIAL: $descricao ** ID: $id_finalizado \nOPERADORA: ($nome_operadora) ** Data Pagamento: $data_pagamento\n";
 
     $parcela = 0;
-    $sql2 = "SELECT max(parcela) as ultima_parcela from tbl_transacoes where id_finalizado = '$id_finalizado' ;";
+    $sqlUltimaParcela = "SELECT max(parcela) as ultima_parcela from tbl_transacoes where id_finalizado = '$id_finalizado' ;";
 
-    $result2 = mysqli_query($conect, $sql2) or die(mysqli_error($conect));
+    $selectUltimaParcela = mysqli_query($conect, $sqlUltimaParcela) or die(mysqli_error($conect));
 
-    if ($rs2 = mysqli_fetch_array($result2)) {
+    if ($rs2 = mysqli_fetch_array($selectUltimaParcela)) {
+
         $parcela = $rs2['ultima_parcela'];
 
         if ($parcela >= 1) {
+
+            if ($log)
+                echo "jÁ TEM PELO MENOS UM PAGAMENTO NO SISTEMA";
+
             $sql2 = "SELECT max(parcela) as ultima_parcela, max(data_pagamento_operadora) as data_pagamento_operadora from tbl_transacoes where id_finalizado = '$id_finalizado' and  ( data between '$dataInicial' and '$dataFim') ;";
             // echo $sql2;
             // echo "Pegando valores maximos parcelas\n";
@@ -153,74 +161,15 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
                     $mesContador = 1;
 
-                    //  tratar a porcentagem do valor $rs['valor']
-                    // tipo_transacao pegar da transacao
                     $valor_contrato = $rs['valor'];
 
-                    $dia = date("d", strtotime($data_pagamento));
-                    $diaDaSemana = date("w", strtotime($data_pagamento));
-                    $mes = date("m", strtotime($data_pagamento));
-                    $ano = date("Y", strtotime($data_pagamento));
-
-                    // echo "Antigo - $data_pagamento, " . ($diaDaSemana) . "\n";
-                    // exit();
-
-                    if ($id_operadora == 1) {
-
-                        if ($dia < 15) {
-                            if ($mes == 2) {
-                                $data_pagamento = $ano . "-" . $mes . "-" .  cal_days_in_month(CAL_GREGORIAN, $mes, $ano);
-                            } else {
-                                $data_pagamento = $ano . "-" . $mes . "-30";
-                            }
-                        } else {
-                            $data_pagamento = date("Y-m-15", strtotime($data_pagamento . " +1 month"));
-                        }
-                        $count = 1;
-                        if (date("w", strtotime($data_pagamento)) == 0) {
-                            $data_pagamento = date("Y-m-d", strtotime($data_pagamento . " +1 days"));
-                        } elseif (date("w", strtotime($data_pagamento)) == 6) {
-                            $data_pagamento = date("Y-m-d", strtotime($data_pagamento . " +2 days"));
-                        }
-                    } elseif ($id_operadora == 2 || $id_operadora == 5 || $id_operadora == 8) {
-
-                        $baseDia = 7;
-                        if ($diaDaSemana == 0) {
-                            $baseDia = $baseDia - 2;
-                        } else {
-                            $baseDia = $baseDia + (5 - $diaDaSemana);
-                        }
-                        $data_pagamento = date("Y-m-d", strtotime($data_pagamento . " +$baseDia days"));
-                    } else {
-                        $count = 1;
-                        while ($count <= 3) {
-                            $data_pagamento = date("Y-m-d", strtotime($data_pagamento . " +1 days"));
-                            if (date("w", strtotime($data_pagamento)) != 0 || date("w", strtotime($data_pagamento)) != 6) {
-                                $count++;
-                            }
-                        }
-                    }
-
                     while ($mesContador <= 12) {
+
                         $parcela_prevista = $parcela + $mesContador;
-                        $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_operadora . " + $mesContador month"));
 
-                        // Verificar o dia da semana para o pagamento cair na sexta-feira(AMIL) ou no proximo dia util (OUTRAS OPERADORAS)
-                        $diaDaSemana = date("w", strtotime($data_pagamento_prevista));
-                        if ($id_operadora == 2 || $id_operadora == 5 || $id_operadora == 8) {
-                            if ($diaDaSemana == 0) {
-                                $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " -2 days"));
-                            } else {
-                                $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +" . (5 - $diaDaSemana) . " days"));
-                            }
-                        } else {
+                        $data = date("Y-m-d", strtotime($data_pagamento_operadora . " + $mesContador month"));
+                        $data_pagamento_prevista = calculoData($id_operadora, $data);
 
-                            if ($diaDaSemana == 0) {
-                                $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +1 days"));
-                            } elseif ($diaDaSemana == 6) {
-                                $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +2 days"));
-                            }
-                        }
 
                         // echo "$data_pagamento_prevista, " .  date("w", strtotime($data_pagamento_prevista)) . "\n";
 
@@ -270,9 +219,11 @@ while ($rs = mysqli_fetch_assoc($result)) {
             }
         } else {
 
-            // echo "AINDA NÃO TEM PAGAMENTOS (Previsão a partir da 1ª parcela)\n";
+            if ($log)
+                echo "AINDA NÃO TEM PAGAMENTOS (Previsão a partir da 1ª parcela)\n";
 
             $mesContador = 1;
+            $valor_contrato = $rs['valor'];
 
             while ($mesContador <= 12) {
                 $parcela_prevista = $mesContador;
@@ -326,6 +277,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
 function calculoData($id_operadora, $data_pagamento)
 {
+    global $log;
     $data_pagamento_prevista = $data_pagamento;
 
     $diaDaSemana = date("w", strtotime($data_pagamento_prevista));
@@ -333,7 +285,8 @@ function calculoData($id_operadora, $data_pagamento)
     $mes = date("m", strtotime($data_pagamento_prevista));
     $ano = date("Y", strtotime($data_pagamento_prevista));
 
-    echo "Data inicial: $data_pagamento_prevista ** Dia da semana ($diaDaSemana)\n";
+    if ($log)
+        echo "\nData inicial:  $data_pagamento_prevista ** Dia da semana ($diaDaSemana)\n";
 
     if ($id_operadora == 1) {
 
@@ -374,7 +327,8 @@ function calculoData($id_operadora, $data_pagamento)
 
     $diaDaSemanaPrevista = date("w", strtotime($data_pagamento_prevista));
 
-    echo "--$data_pagamento_prevista   --$diaDaSemanaPrevista\n";
+    // echo "--$data_pagamento_prevista   --$diaDaSemanaPrevista\n";
+
     // Verificar o dia da semana para o pagamento cair na sexta-feira(AMIL) ou no proximo dia util (OUTRAS OPERADORAS)
     if ($id_operadora == 2 || $id_operadora == 5 || $id_operadora == 8) {
         if ($diaDaSemanaPrevista == 0) {
@@ -388,7 +342,9 @@ function calculoData($id_operadora, $data_pagamento)
         $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +2 days"));
     }
 
-    echo "DATA PREVISTA: $data_pagamento_prevista, " .  date("w", strtotime($data_pagamento_prevista)) . "\n";
+    $diaDaSemana = date("w", strtotime($data_pagamento_prevista));
+    if ($log)
+        echo "Data prevista: $data_pagamento_prevista ** Dia da semana ($diaDaSemana)\n";
 
     return $data_pagamento_prevista;
 }
