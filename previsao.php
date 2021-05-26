@@ -1,6 +1,7 @@
 <?php
 
 require_once("includes/connection.php");
+require_once "feriados.php";
 
 $conect = conexaoMysql();
 
@@ -356,6 +357,15 @@ function calculoData($id_operadora, $data_pagamento)
         }
     } elseif ($diaDaSemanaPrevista == 0 || $diaDaSemanaPrevista == 6) {
         $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +2 days"));
+    }
+
+    $resultFeriado = isFeriado($data_pagamento_prevista);
+    if($resultFeriado){
+        $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +1 days"));
+        $diaDaSemanaPrevistaAposFeriado = date("w", strtotime($data_pagamento_prevista));
+        if ($diaDaSemanaPrevistaAposFeriado == 0 || $diaDaSemanaPrevistaAposFeriado == 6) {
+            $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +2 days"));
+        }
     }
 
     $diaDaSemana = date("w", strtotime($data_pagamento_prevista));
