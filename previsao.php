@@ -3,7 +3,7 @@
 require_once("includes/connection.php");
 require_once "feriados.php";
 
-$conect = conexaoMysql();
+$conect = conexaoMysqlTest();
 
 $salvar = true;
 $log = false;
@@ -135,7 +135,8 @@ while ($rs = mysqli_fetch_assoc($result)) {
     echo "RAZÃO SOCIAL: $descricao ** ID: $id_finalizado \nOPERADORA: ($nome_operadora) ** Data Pagamento: $data_pagamento\n";
 
     $parcela = 0;
-    $sqlUltimaParcela = "SELECT max(parcela) as ultima_parcela from tbl_transacoes where id_finalizado = '$id_finalizado' ;";
+    $sqlUltimaParcela = "SELECT max(parcela) as ultima_parcela from tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id where id_finalizado = '$id_finalizado' and id_operadora = '$id_operadora' and dental = 0 ;";
+    // echo "$sqlUltimaParcela\n";
 
     $selectUltimaParcela = mysqli_query($conect, $sqlUltimaParcela) or die(mysqli_error($conect));
 
@@ -171,6 +172,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
                     if ($parcela >= 2) {
                         $data_pagamento_operadora = date("Y-m", strtotime($ultima_data_pagamento_operadora . " -1 month"))."-$dia";
+                        $parcela -= 1;
                     } else {
                         $data_pagamento_operadora = date("Y-m", strtotime($ultima_data_pagamento_operadora))."-$dia";
                     }
@@ -215,8 +217,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
                             if ($rsTransacao['qtt'] == 0) {
 
-                                if ($salvar)
-                                    $res = mysqli_query($conect, $transacao) or die(mysqli_error($conect));
+                                if ($salvar) $res = mysqli_query($conect, $transacao) or die(mysqli_error($conect));
 
                                 if ($parcela_prevista <= 3) {
 
