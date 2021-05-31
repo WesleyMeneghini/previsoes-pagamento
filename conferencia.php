@@ -41,18 +41,7 @@ $totalPagoMes = (float) 0.0;
 
 
 
-
-// $sql = "SELECT descricao, id_operadora, valor, id_finalizado, parcela, data_pagamento_operadora, c.titulo as operadora  FROM tbl_transacoes as t  inner join tbl_contas as c on t.id_origem = c.id where data_pagamento_operadora = '$dataPesquisa'  and id_destino = 1 and dental = 0 order by id_operadora, id_finalizado;";
-// $select = mysqli_query($conect, $sql);
-// while ($rsTransacao = mysqli_fetch_assoc($select)) {
-//     $valor = $rsTransacao['valor'];
-//     $totalPago += $valor;
-//     $totalPagoMes += $valor;
-//     $color = obter_cor($rsTransacao['id_operadora']);
-//     $styleColorText = "style='color:$color;'";
-// }
-
-while ($qqtDiasMes > 1) {
+while ($qqtDiasMes > 27) {
 
 
     $dia = $qqtDiasMes;
@@ -64,41 +53,97 @@ while ($qqtDiasMes > 1) {
 
     foreach ($operadoras as $operadora) {
         $idOperadora = $operadora['id'];
-        $sql = "SELECT * FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 and id_operadora =  $idOperadora order by id_operadora, id_finalizado ;";
+        $nomeOperadora = $operadora['titulo'];
 
+        $sql = "SELECT id FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 and id_operadora =  $idOperadora order by id_operadora, id_finalizado;";
         $select = mysqli_query($conect, $sql);
-        while ($rsTransacao = mysqli_fetch_assoc($select)) {
-            $idFinalizado = $rsTransacao['id_finalizado'];
-            $idOperadora = $rsTransacao['id_operadora'];
-            $parcela = $rsTransacao['parcela'];
-            $operadora = $rsTransacao['operadora'];
-            $valor = $rsTransacao['valor'];
-            $data = $rsTransacao['data'];
-            $titulo = $rsTransacao['titulo'];
 
-            echo "\nPrevisto $dataPesquisa: $titulo\n";
+        if (mysqli_num_rows($select) > 0) {
 
-            $sqlTransacao = "SELECT descricao, id_operadora, valor, id_finalizado, parcela, data_pagamento_operadora, c.titulo as operadora  
-            FROM tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id 
-            WHERE data_pagamento_operadora = '$dataPesquisa' and id_destino = 1 AND id_finalizado = $idFinalizado and parcela = $parcela  and dental = 0 order by id_operadora, id_finalizado;";
+            echo "
+            <h3>Operadora: $nomeOperadora - Data: $dataPesquisa</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data Prevista</th>
+                        <th>IdFinalizado</th>
+                        <th>Parcela</th>
+                        <th>Valor Previsto</th>
+                        <th>Descrição</th>
+                        <th>Valor Pago data certa</th>
+                        <th>Outra data de pagamento</th>
+                        <th>Valor Pago fora data</th>
+                    </tr>
+                </thead>
+                <tbody>";
 
-            $selectTransacao = mysqli_query($conect, $sqlTransacao);
-            if ($selectTransacao = mysqli_fetch_array($selectTransacao)) {
-                $descricao = $selectTransacao['descricao'];
-                
-                echo "Pago $dataPesquisa: $descricao\n";
-            } else {
+
+
+            $sql = "SELECT * FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 and id_operadora =  $idOperadora order by id_operadora, id_finalizado ;";
+
+
+
+            $select = mysqli_query($conect, $sql);
+            while ($rsPrevisto = mysqli_fetch_assoc($select)) {
+                $idFinalizado = $rsPrevisto['id_finalizado'];
+                $idOperadora = $rsPrevisto['id_operadora'];
+                $parcela = $rsPrevisto['parcela'];
+                $operadora = $rsPrevisto['operadora'];
+                $valor = $rsPrevisto['valor'];
+                $data = $rsPrevisto['data'];
+                $titulo = $rsPrevisto['titulo'];
+
+                // echo "\nPrevisto $dataPesquisa: $titulo\n";
+
+                echo "<tr>
+                        <td>$dataPesquisa</td>
+                        <td>$idFinalizado</td>
+                        <td>$parcela</td>
+                        <td>$valor</td>
+                        <td>$titulo</td>";
+
+
                 $sqlTransacao = "SELECT descricao, id_operadora, valor, id_finalizado, parcela, data_pagamento_operadora, c.titulo as operadora  
-                    FROM tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id 
-                    WHERE  id_destino = 1 AND id_finalizado = $idFinalizado and parcela = $parcela  and dental = 0 order by id_operadora, id_finalizado;";
+                FROM tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id 
+                WHERE data_pagamento_operadora = '$dataPesquisa' and id_destino = 1 AND id_finalizado = $idFinalizado and parcela = $parcela  and dental = 0 order by id_operadora, id_finalizado;";
 
                 $selectTransacao = mysqli_query($conect, $sqlTransacao);
                 if ($selectTransacao = mysqli_fetch_array($selectTransacao)) {
                     $descricao = $selectTransacao['descricao'];
-                    $dataPagamentoOperadora = $selectTransacao['data_pagamento_operadora'];
-                    echo "Pago $dataPagamentoOperadora: $descricao\n";
+                    $valorPago = $selectTransacao['valor'];
+
+                    // echo "Pago $dataPesquisa: $descricao\n";
+
+                    echo "
+                        <td>$valorPago</td>
+                        <td></td>
+                        <td></td>";
+                } else {
+                    $sqlTransacao = "SELECT descricao, id_operadora, valor, id_finalizado, parcela, data_pagamento_operadora, c.titulo as operadora  
+                        FROM tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id 
+                        WHERE  id_destino = 1 AND id_finalizado = $idFinalizado and parcela = $parcela  and dental = 0 order by id_operadora, id_finalizado;";
+
+                    $selectTransacao = mysqli_query($conect, $sqlTransacao);
+                    if ($selectTransacao = mysqli_fetch_array($selectTransacao)) {
+                        $descricao = $selectTransacao['descricao'];
+                        $dataPagamentoOperadora = $selectTransacao['data_pagamento_operadora'];
+                        $dataPagamentoOperadora = $selectTransacao['data_pagamento_operadora'];
+                        $valorPago = $selectTransacao['valor'];
+                        // echo "Pago $dataPagamentoOperadora: $descricao\n";
+
+                        echo "
+                            <td></td>
+                            <td>$dataPagamentoOperadora</td>
+                            <td>$valorPago</td>";
+                    }
                 }
+                echo "</tr>";
             }
+
+            echo "
+                </tbody>
+            </table>
+            ";
         }
     }
 
