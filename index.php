@@ -45,7 +45,7 @@
 
 
 <body>
-    <ul class="collapsible">
+    <!-- <ul class="collapsible">
         <li class="">
             <div class="collapsible-header"><i class="material-icons">date_range</i>Data</div>
             <div class="collapsible-body">
@@ -65,5 +65,8 @@
                 </ul>
             </div>
         </li>
-    </ul>
+    </ul> -->
+    <?php
+        require_once "./conferencia.php";
+    ?>
 </body>
