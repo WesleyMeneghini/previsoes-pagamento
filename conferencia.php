@@ -4,27 +4,13 @@ ini_set('error_reporting', E_ALL); // mesmo resultado de: error_reporting(E_ALL)
 ini_set('display_errors', 1);
 
 require_once "../includes/functions.php";
-
-
-function conexaoMysqlTest()
-{
-
-    $server = (string) "10.253.0.10";
-    $user = (string) "maktubseguros_homol";
-    $password = (string) "b6TU3RsoqTWt";
-    $database = (string) "maktubseguros_homol";
-
-    $conect = mysqli_connect($server, $user, $password, $database);
-    @mysqli_set_charset($conect, 'utf8');
-
-    return $conect;
-}
+require_once "../includes/connection.php";
 
 function styleColorText($color){
     return "style='color:$color;'";
 }
 
-$conect = conexaoMysqlTest();
+$conect = conexaoMysql();
 
 
 $operadoras = array();
@@ -75,7 +61,22 @@ while ($qqtDiasMes > 1) {
 
             
 
-            $sql = "SELECT id FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 and id_operadora =  $idOperadora order by id_operadora, id_finalizado;";
+            $sql = "SELECT 
+                        r.id as id_relatorio,
+                        id_finalizado,
+                        r.id_operadora as id_operadora,
+                        parcela,
+                        r.operadora as nome_operadora,
+                        r.valor as valor,
+                        r.data as data_previsao,
+                        r.titulo as titulo,
+                        f.data_pagamento as data_pagamento_inicial
+                    FROM tbl_relatorio_recebimento as r
+                        inner join tbl_finalizado as f on r.id_finalizado = f.id
+                    WHERE r.data = '$dataPesquisa' and r.comissao = 0 and r.id_operadora = $idOperadora and f.vitalicio = 0
+                    order by id_operadora, id_finalizado;";
+            
+            // echo "$sql\n____";
             $select = mysqli_query($conect, $sql);
 
             if (mysqli_num_rows($select) > 0) {
@@ -89,6 +90,7 @@ while ($qqtDiasMes > 1) {
                         <table>
                             <thead>
                                 <tr>
+                                    <th>Data Inicial de Pagamento</th>
                                     <th>Data Prevista</th>
                                     <th>IdFinalizado</th>
                                     <th>Parcela</th>
@@ -101,24 +103,21 @@ while ($qqtDiasMes > 1) {
                             </thead>
                             <tbody>';
 
-
-                $sql = "SELECT * FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 and id_operadora =  $idOperadora order by id_operadora, id_finalizado ;";
-
-
-
                 $select = mysqli_query($conect, $sql);
                 while ($rsPrevisto = mysqli_fetch_assoc($select)) {
                     $idFinalizado = $rsPrevisto['id_finalizado'];
                     $idOperadora = $rsPrevisto['id_operadora'];
                     $parcela = $rsPrevisto['parcela'];
-                    $operadora = $rsPrevisto['operadora'];
+                    $operadora = $rsPrevisto['nome_operadora'];
                     $valor = $rsPrevisto['valor'];
-                    $data = $rsPrevisto['data'];
+                    $data = $rsPrevisto['data_previsao'];
                     $titulo = $rsPrevisto['titulo'];
+                    $dataPagamentoInicial = $rsPrevisto['data_pagamento_inicial'];
 
                     // echo "\nPrevisto $dataPesquisa: $titulo\n";
 
                     echo "<tr>
+                            <td ".styleColorText("#8f8f8f").">$dataPagamentoInicial</td>
                             <td>$dataPesquisa</td>
                             <td>$idFinalizado</td>
                             <td>$parcela</td>
