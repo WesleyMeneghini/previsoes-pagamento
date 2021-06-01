@@ -10,6 +10,10 @@ function styleColorText($color){
     return "style='color:$color;'";
 }
 
+function formatMoeda($number){
+    return number_format($number, 2, ",", ".");
+}
+
 $conect = conexaoMysql();
 
 
@@ -34,7 +38,7 @@ $totalPagoMes = (float) 0.0;
 
 echo '<ul class="collapsible">';
 
-while ($qqtDiasMes > 1) {
+while ($qqtDiasMes > 25) {
 
 
     $dia = $qqtDiasMes;
@@ -90,9 +94,9 @@ while ($qqtDiasMes > 1) {
                         <table>
                             <thead>
                                 <tr>
+                                    <th>IdFinalizado</th>
                                     <th>Data Inicial de Pagamento</th>
                                     <th>Data Prevista</th>
-                                    <th>IdFinalizado</th>
                                     <th>Parcela</th>
                                     <th>Valor Previsto</th>
                                     <th>Descrição</th>
@@ -117,11 +121,11 @@ while ($qqtDiasMes > 1) {
                     // echo "\nPrevisto $dataPesquisa: $titulo\n";
 
                     echo "<tr>
+                            <td>$idFinalizado</td>
                             <td ".styleColorText("#8f8f8f").">$dataPagamentoInicial</td>
                             <td>$dataPesquisa</td>
-                            <td>$idFinalizado</td>
                             <td>$parcela</td>
-                            <td>$valor</td>
+                            <td>".formatMoeda($valor)."</td>
                             <td>$titulo</td>";
 
 
@@ -137,7 +141,7 @@ while ($qqtDiasMes > 1) {
                         // echo "Pago $dataPesquisa: $descricao\n";
 
                         echo "
-                            <td ".styleColorText("green").">$valorPago</td>
+                            <td ".styleColorText("green").">".formatMoeda($valorPago)."</td>
                             <td></td>
                             <td></td>";
                     } else {
@@ -156,7 +160,7 @@ while ($qqtDiasMes > 1) {
                             echo "
                                 <td></td>
                                 <td>$dataPagamentoOperadora</td>
-                                <td ".styleColorText("red").">$valorPago</td>";
+                                <td ".styleColorText("red").">".formatMoeda($valorPago)."</td>";
                         }
                     }
                     echo "</tr>";
