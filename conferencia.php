@@ -29,30 +29,34 @@ $anoAtual = date('Y');
 $mes = date('m') - 1;
 
 $dataInicial = "$anoAtual-$mes-01";
-$dataFimDeMesAtual = "$anoAtual-$mes-" . cal_days_in_month(CAL_GREGORIAN, $mes, $anoAtual);
+$dataFimDeMes = "$anoAtual-$mes-" . cal_days_in_month(CAL_GREGORIAN, $mes, $anoAtual);
 $qqtDiasMes = cal_days_in_month(CAL_GREGORIAN, $mes, $anoAtual);
 
 $totalPrevistoMes = (float) 0.0;
 $totalPagoMes = (float) 0.0;
 
+$pesquisaPorDatas = "'$dataInicial' AND '$dataFimDeMes'";
+
 $sqlTotalMes = "SELECT 
-                    SUM(valor) AS valor_total_previsto_mes,
-                    (SELECT 
-                            SUM(comissao)
-                        FROM
-                            busca_comissoes
-                        WHERE
-                            (data_pagamento between '$dataInicial' and '$dataFimDeMesAtual')
-                                AND dental = 0) AS valor_total_pago_mes
+                SUM(relatorio.valor) AS valor_total_previsto_mes,
+                (SELECT 
+                        SUM(comissao)
+                    FROM
+                        busca_comissoes 
+                    WHERE
+                        (data_pagamento BETWEEN $pesquisaPorDatas)
+                            AND dental = 0) AS valor_total_pago_mes
                 FROM
-                    tbl_relatorio_recebimento
+                    tbl_relatorio_recebimento as relatorio INNER JOIN tbl_finalizado as f on relatorio.id_finalizado = f.id
                 WHERE
-                    (data between '$dataInicial' and '$dataFimDeMesAtual') AND comissao = 0;";
+                    (relatorio.data BETWEEN $pesquisaPorDatas) AND comissao = 0 AND f.vitalicio = 0;";
+
 $selectTotalMes = mysqli_query($conect, $sqlTotalMes);
 if ($rsTotalMes = mysqli_fetch_assoc($selectTotalMes)){
     $valorTotalPrevistoMes = $rsTotalMes['valor_total_previsto_mes'];
     $valorTotalPagoMes = $rsTotalMes['valor_total_pago_mes'];
 }
+echo $sqlTotalMes;
 
 echo '
 <h4>
@@ -70,7 +74,7 @@ echo '
 
 echo '<ul class="collapsible">';
 
-while ($qqtDiasMes > 1) {
+while ($qqtDiasMes > 30) {
 
 
     $dia = $qqtDiasMes;
@@ -228,7 +232,11 @@ while ($qqtDiasMes > 1) {
 
                     $sqlTransacao = "SELECT descricao, id_operadora, valor, id_finalizado, parcela, data_pagamento_operadora, c.titulo as operadora  
                     FROM tbl_transacoes as t inner join tbl_contas as c on t.id_origem = c.id 
-                    WHERE data_pagamento_operadora = '$dataPesquisa' and id_destino = 1 AND id_finalizado = $idFinalizado and parcela = $parcela  and dental = 0 order by id_operadora, id_finalizado;";
+                    WHERE data_pagamento_operadora = '$dataPesquisa' 
+                    and id_destino = 1 AND id_finalizado = $idFinalizado 
+                    AND (IF(id_operadora = 1, parcela = $parcela OR parcela = $parcela - 1 , parcela = $parcela)) and dental = 0 
+                    order by id_operadora, id_finalizado;";
+                    echo "$sqlTransacao ____";
 
                     $selectTransacao = mysqli_query($conect, $sqlTransacao);
                     if ($selectTransacao = mysqli_fetch_array($selectTransacao)) {
@@ -249,7 +257,6 @@ while ($qqtDiasMes > 1) {
                         $selectTransacao = mysqli_query($conect, $sqlTransacao);
                         if ($selectTransacao = mysqli_fetch_array($selectTransacao)) {
                             $descricao = $selectTransacao['descricao'];
-                            $dataPagamentoOperadora = $selectTransacao['data_pagamento_operadora'];
                             $dataPagamentoOperadora = $selectTransacao['data_pagamento_operadora'];
                             $valorPago = $selectTransacao['valor'];
                             // echo "Pago $dataPagamentoOperadora: $descricao\n";
