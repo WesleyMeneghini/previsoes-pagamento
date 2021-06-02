@@ -38,7 +38,7 @@ $totalPagoMes = (float) 0.0;
 
 echo '<ul class="collapsible">';
 
-while ($qqtDiasMes > 25) {
+while ($qqtDiasMes > 30) {
 
 
     $dia = $qqtDiasMes;
@@ -53,9 +53,40 @@ while ($qqtDiasMes > 25) {
 
     if (mysqli_num_rows($select) > 0) {
 
+        $sqlTotalDia = "SELECT 
+                            SUM(valor) AS valor_total_dia_previsto,
+                            (SELECT 
+                                    SUM(comissao)
+                                FROM
+                                    busca_comissoes
+                                WHERE
+                                    data_pagamento = '$dataPesquisa'
+                                        AND dental = 0) AS valor_total_pago_dia
+                        FROM
+                            tbl_relatorio_recebimento
+                        WHERE
+                            data = '$dataPesquisa' AND comissao = 0;";
+        $selectTotalDia = mysqli_query($conect, $sqlTotalDia);
+        if ($rsTotalDia = mysqli_fetch_assoc($selectTotalDia)){
+            $valorTotalPrevistoDia = $rsTotalDia['valor_total_dia_previsto'];
+            $valorTotalPagoDia = $rsTotalDia['valor_total_pago_dia'];
+        }
+
         echo '
         <li class="">
-            <div class="collapsible-header"><i class="material-icons">date_range</i>'.$dataPesquisa.'</div>
+            <div class="collapsible-header"><i class="material-icons">date_range</i>'.$dataPesquisa.' 
+                <div style="margin-left: auto;">
+                    <span '.styleColorText("#8f8f8f").'>
+                        Valor Previsto: R$ '.formatMoeda($valorTotalPrevistoDia).'
+                    </span>
+                    &nbsp
+                    | 
+                    &nbsp
+                    <span '.styleColorText("green").'>
+                        Valor Pago: R$ '.formatMoeda($valorTotalPagoDia).'
+                    </span>
+                </div>
+            </div>
             <div class="collapsible-body">
                 <ul class="collapsible">';
 
@@ -85,11 +116,45 @@ while ($qqtDiasMes > 25) {
 
             if (mysqli_num_rows($select) > 0) {
 
+                $sqlTotalDiaOperadora = "SELECT 
+                                            SUM(valor) AS valor_total_dia_previsto,
+                                            (SELECT 
+                                                    SUM(comissao)
+                                                FROM
+                                                    busca_comissoes
+                                                WHERE
+                                                    data_pagamento = '$dataPesquisa'
+                                                        AND dental = 0 AND id_operadora = $idOperadora) AS valor_total_pago_dia
+                                        FROM
+                                            tbl_relatorio_recebimento
+                                        WHERE
+                                            data = '$dataPesquisa' AND id_operadora = $idOperadora AND comissao = 0;";
+
+                $selectTotalDiaOperadora = mysqli_query($conect, $sqlTotalDiaOperadora);
+
+                if ($rsTotalDiaOperadora = mysqli_fetch_assoc($selectTotalDiaOperadora)){
+                    $valorTotalPrevistoDiaOperadora = $rsTotalDiaOperadora['valor_total_dia_previsto'];
+                    $valorTotalPagoDiaOperadora = $rsTotalDiaOperadora['valor_total_pago_dia'];
+                }
+
+
                 $color = obter_cor($idOperadora);
 
                 echo '
                 <li class="">
-                    <div class="collapsible-header"><i class="material-icons" '.styleColorText($color).'>description</i>'.$nomeOperadora.'</div>
+                    <div class="collapsible-header"><i class="material-icons" '.styleColorText($color).'>description</i>'.$nomeOperadora.'
+                        <div style="margin-left: auto;">
+                            <span '.styleColorText("#8f8f8f").'>
+                                Valor Previsto: R$ '.formatMoeda($valorTotalPrevistoDiaOperadora).'
+                            </span>
+                            &nbsp
+                            | 
+                            &nbsp
+                            <span '.styleColorText("green").'>
+                                Valor Pago: R$ '.formatMoeda($valorTotalPagoDiaOperadora).'
+                            </span>
+                        </div>
+                    </div>
                     <div class="collapsible-body">
                         <table>
                             <thead>
