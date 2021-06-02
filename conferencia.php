@@ -35,10 +35,42 @@ $qqtDiasMes = cal_days_in_month(CAL_GREGORIAN, $mes, $anoAtual);
 $totalPrevistoMes = (float) 0.0;
 $totalPagoMes = (float) 0.0;
 
+$sqlTotalMes = "SELECT 
+                    SUM(valor) AS valor_total_previsto_mes,
+                    (SELECT 
+                            SUM(comissao)
+                        FROM
+                            busca_comissoes
+                        WHERE
+                            (data_pagamento between '$dataInicial' and '$dataFimDeMesAtual')
+                                AND dental = 0) AS valor_total_pago_mes
+                FROM
+                    tbl_relatorio_recebimento
+                WHERE
+                    (data between '$dataInicial' and '$dataFimDeMesAtual') AND comissao = 0;";
+$selectTotalMes = mysqli_query($conect, $sqlTotalMes);
+if ($rsTotalMes = mysqli_fetch_assoc($selectTotalMes)){
+    $valorTotalPrevistoMes = $rsTotalMes['valor_total_previsto_mes'];
+    $valorTotalPagoMes = $rsTotalMes['valor_total_pago_mes'];
+}
+
+echo '
+<h4>
+    <span '.styleColorText("#8f8f8f").'>
+        Valor Previsto Mês: R$ '.formatMoeda($valorTotalPrevistoMes).'
+    </span>
+    &nbsp
+    | 
+    &nbsp
+    <span '.styleColorText("green").'>
+        Valor Pago Mês: R$ '.formatMoeda($valorTotalPagoMes).'
+    </span>
+</h4>';
+
 
 echo '<ul class="collapsible">';
 
-while ($qqtDiasMes > 30) {
+while ($qqtDiasMes > 1) {
 
 
     $dia = $qqtDiasMes;
