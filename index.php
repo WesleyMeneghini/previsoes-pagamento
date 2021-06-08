@@ -20,22 +20,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
     <script>
-        $(document).ready(function () {
+        $(document).ready(function() {
             $('.tabs').tabs();
         });
 
-        $(document).ready(function () {
+        $(document).ready(function() {
             $('.modal').modal();
         });
 
 
         // Efeito para abrir e fechar as informaçoes do lançamento das comissoes
-        $(document).ready(function () {
+        $(document).ready(function() {
             $('.collapsible').collapsible({
                 accordion: false
             });
         });
     </script>
+
+
+
+
+
     <style>
         .carousel .carousel-item {
             width: 100%;
@@ -45,28 +50,82 @@
 
 
 <body>
-    <!-- <ul class="collapsible">
-        <li class="">
-            <div class="collapsible-header"><i class="material-icons">date_range</i>Data</div>
-            <div class="collapsible-body">
-                <ul class="collapsible">
-                    <li class="">
-                        <div class="collapsible-header"><i class="material-icons">date_range</i>Teste 01</div>
-                        <div class="collapsible-body">
-                            
-                        </div>
-                    </li>
-                    <li class="">
-                        <div class="collapsible-header"><i class="material-icons">date_range</i>Teste 02</div>
-                        <div class="collapsible-body">
-                            
-                        </div>
-                    </li>
-                </ul>
+    <div class="container">
+
+        <form>
+            <div class="row">
+                <div class="input-field col s6 ">
+                    <input type="date" id="data_inicial" name="data_inicial" value="<?=date("Y-m-01")?>" />
+
+                    <label>Data inicial</label>
+                </div>
+                <div class="input-field col s6 ">
+                    <input type="date" id="data_final" name="data_final" value="<?=date("Y-m-d")?>"/>
+                    <label>Data Final</label>
+                </div>
+                <button class="btn waves-effect waves-light" id="btn_pesquisa" type="submit" value="PESQUISAR">ENVIAR</button>
+
             </div>
-        </li>
-    </ul> -->
+        </form>
+
+        <div id="resultado_total_operadoras">
+
+        </div>
+    </div>
+
+    <script>
+        $("form").submit(function(e) {
+            e.preventDefault();
+            const $dataInicial = $("#data_inicial").val();
+            const $dataFinal = $("#data_final").val();
+
+            if ($dataFinal < $dataInicial) {
+                alert("Data inicial não pode ser maior que a final!");
+            } else {
+                $.ajax({
+                    url: "total_operadoras.php",
+                    type: 'POST',
+                    data: {
+                        "data_inicial": $dataInicial,
+                        "data_final": $dataFinal
+                    },
+                    beforeSend: function() {
+                        $("#resultado").html("Carregando Total das Operadoras do mês...");
+                    }
+                }).done(function(msg) {
+                    let res = JSON.parse(msg);
+
+                    let totalOperadoras = res.map(e => (
+                        `<tr>
+                            <td>${e.operadora}</td>
+                            <td> R$ ${e.total}</td>
+                        </tr>`));
+
+                    let tableResultTotalOperadoras = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Operadora</th>
+                                    <th>Total</th>
+                                </tr>
+                                </thead>
+                                ${totalOperadoras}
+                            </tbody>
+                        </table>`;
+                    
+                    $("#resultado_total_operadoras").html(tableResultTotalOperadoras);
+                        
+                })
+            }
+
+        });
+    </script>
+
+    
+   
     <?php
-        require_once "./conferencia.php";
+    // require_once "./conferencia.php";
     ?>
+
+    
 </body>
