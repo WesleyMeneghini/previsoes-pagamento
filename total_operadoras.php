@@ -18,10 +18,10 @@ while ($rsOperadora = mysqli_fetch_assoc($selectOperadoras)) {
     array_push($operadoras, $rsOperadora);
 }
 
-if (isset($_POST['data_inicial']) && isset($_POST['data_final'])) {
+if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
 
-    $dataInicial = $_POST['data_inicial'];
-    $dataFinal = $_POST['data_final'];
+    $dataInicial = $_GET['data_inicial'];
+    $dataFinal = $_GET['data_final'];
 
 
     $pesquisaPorDatas = "'$dataInicial' AND '$dataFinal'";
