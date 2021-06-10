@@ -42,9 +42,20 @@ if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
         $select = mysqli_query($conect, $sql);
 
         if ($rs = mysqli_fetch_assoc($select)) {
+
+            $sqlPrevisto = "SELECT sum(valor) as valor_previsto from tbl_relatorio_recebimento where id_operadora = $idOperadora and comissao = 0 AND (data BETWEEN $pesquisaPorDatas);";
+
+            $selectPrevisto = mysqli_query($conect, $sqlPrevisto);
+            if ($rsPrevisto = mysqli_fetch_assoc($selectPrevisto)) {
+                $valorPrevisto = $rsPrevisto['valor_previsto'];
+            }
+
+
+
+
             $totalMesOperadora = $rs['comissao'];
             if ($totalMesOperadora > 0.0) {
-                $totalOperadora = ['operadora' => $nomeOperadora, 'total' => $totalMesOperadora];
+                $totalOperadora = ['operadora' => $nomeOperadora, 'total' => $totalMesOperadora, 'previsto' => $valorPrevisto];
                 array_push($total, $totalOperadora);
                 // echo "$nomeOperadora => R$ $totalMesOperadora\n";
             }

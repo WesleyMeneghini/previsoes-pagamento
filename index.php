@@ -72,6 +72,7 @@
                     `<tr>
                         <td>${e.operadora}</td>
                         <td> R$ ${e.total}</td>
+                        <td> R$ ${e.previsto}</td>
                     </tr>`)
                 );
 
@@ -80,7 +81,8 @@
                             <thead>
                                 <tr>
                                     <th>Operadora</th>
-                                    <th>Total</th>
+                                    <th>Total Pago</th>
+                                    <th>Total Previsto</th>
                                 </tr>
                             </thead>
                             <tbody>
