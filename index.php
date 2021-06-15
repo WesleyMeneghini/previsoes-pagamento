@@ -36,16 +36,38 @@
             });
         }
 
-        const relatorioPeriodo = (dataInicial, dataFinal) => {
+        const loaderCircle = () => (
+            `<div class="preloader-wrapper big active">
+                <div class="spinner-layer spinner-blue-only">
+                <div class="circle-clipper left">
+                    <div class="circle"></div>
+                </div><div class="gap-patch">
+                    <div class="circle"></div>
+                </div><div class="circle-clipper right">
+                    <div class="circle"></div>
+                </div>
+                </div>
+            </div>`
+        )
+
+        const formatMoedaReal = (number) => {
+            return (parseFloat(number)).toLocaleString('pt-br', {
+                style: 'currency',
+                currency: 'BRL'
+            });
+        }
+
+        const relatorioPeriodo = (dataInicial, dataFinal, tipo) => {
             $.ajax({
                 url: "relatorio.php",
                 type: 'GET',
                 data: {
                     "data_inicial": dataInicial,
-                    "data_final": dataFinal
+                    "data_final": dataFinal,
+                    "tipo": tipo,
                 },
                 beforeSend: function() {
-                    $("#resultado_dias").html("Carregando Total dos dias do mês...");
+                    $("#resultado_dias").html(loaderCircle());
                 }
             }).done(function(msg) {
                 $("#resultado_dias").html(msg);
@@ -63,21 +85,31 @@
                     "data_final": dataFinal
                 },
                 beforeSend: function() {
-                    $("#resultado").html("Carregando Total das Operadoras do mês...");
+                    $("#resultado").html(loaderCircle());
                 }
             }).done(function(msg) {
                 let res = JSON.parse(msg);
+                console.log(msg);
 
-                let totalOperadoras = res.map(e => (
+                var totalPago = 0;
+                var totalPrevisto = 0;
+
+                let totalOperadorasTrs = res.map(e => (
                     `<tr>
                         <td>${e.operadora}</td>
-                        <td> R$ ${e.total}</td>
-                        <td> R$ ${e.previsto}</td>
-                    </tr>`)
-                );
+                        <td> ${formatMoedaReal(e.total)}</td>
+                        <td> ${formatMoedaReal(e.previsto)}</td>
+                    </tr>`));
 
-                let tableResultTotalOperadoras = 
-                        `<table>
+
+                res.map(e => {
+                    totalPago += parseFloat(e.total);
+                    totalPrevisto += parseFloat(e.previsto)
+                });
+
+
+                let tableResultTotalOperadoras =
+                    `<table>
                             <thead>
                                 <tr>
                                     <th>Operadora</th>
@@ -86,7 +118,12 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${totalOperadoras}
+                                ${totalOperadorasTrs}
+                                <tr>
+                                    <td>Total</td>
+                                    <td> ${formatMoedaReal(totalPago)}</td>
+                                    <td> ${formatMoedaReal(totalPrevisto)}</td>
+                                </tr>
                             </tbody>
                         </table>`;
 
@@ -111,17 +148,30 @@
         <div class="row">
             <form>
                 <div class="input-field col s5 ">
-                    <input type="date" id="data_inicial" name="data_inicial" value="<?= date("Y-m-01") ?>">
+                    <input type="date" id="data_inicial" name="data_inicial" value="<?= date("Y-05-01") ?>">
 
                     <label>Data inicial</label>
                 </div>
                 <div class="input-field col s5 ">
-                    <input type="date" id="data_final" name="data_final" value="<?= date("Y-m-d") ?>">
+                    <input type="date" id="data_final" name="data_final" value="<?= date("Y-05-31") ?>">
                     <label>Data Final</label>
                 </div>
-                <div class="input-field col s2 ">
+                <div class="input-field col s1 ">
+                    <!-- Switch -->
+                    <div class="switch">
+                        <label>
+                            Previsto/Pago
+                            <input type="checkbox" id="pago_previsto">
+                            <span class="lever"></span>
+                            Pago/Previsto
+                        </label>
+                    </div>
+                </div>
+                <div class="input-field col s1 ">
                     <button class="btn waves-effect waves-light" id="btn_pesquisa" type="submit" value="PESQUISAR">ENVIAR</button>
                 </div>
+
+
             </form>
         </div>
 
@@ -134,11 +184,18 @@
             e.preventDefault();
             const $dataInicial = $("#data_inicial").val();
             const $dataFinal = $("#data_final").val();
+            const $pagoPrevisto = $("#pago_previsto");
+            let tipo = "";
 
             if ($dataFinal < $dataInicial) {
                 alert("Data inicial não pode ser maior que a final!");
             } else {
-                relatorioPeriodo($dataInicial, $dataFinal);
+                if($pagoPrevisto.is(":checked")){
+                    tipo = "pago";
+                }else{
+                    tipo = "previsto";
+                }
+                relatorioPeriodo($dataInicial, $dataFinal, tipo);
                 totalOperadoras($dataInicial, $dataFinal);
             }
         });
