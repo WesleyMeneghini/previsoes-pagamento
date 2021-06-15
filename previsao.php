@@ -8,6 +8,8 @@ $conect = conexaoMysql();
 $salvar = true;
 $log = false;
 
+$qttMeses = 6;
+
 $anoAnterior = date('Y') - 1;
 $anoAtual = date('Y');
 $proximoAno = date('Y') + 1;
@@ -24,7 +26,7 @@ $dataFim = "$anoAtual-$mes-" . cal_days_in_month(CAL_GREGORIAN, $mes, $proximoAn
 // $dataFim = $anoAtual . "-" . "01" . "-" . "30";
 
 
-$sql = "SELECT tbl_finalizado.*, operadora.titulo as nome_operadora FROM tbl_finalizado inner join tbl_operadora as operadora on tbl_finalizado.id_operadora = operadora.id  where (data_pagamento is not null or data_previsao_pagamento is not null) and vitalicio = 0 and id_operadora > 0  order by id desc;";
+$sql = "SELECT tbl_finalizado.*, operadora.titulo as nome_operadora FROM tbl_finalizado inner join tbl_operadora as operadora on tbl_finalizado.id_operadora = operadora.id  where (data_pagamento is not null or data_previsao_pagamento is not null) and vitalicio = 0 and id_operadora >= 0  order by id desc;";
 
 // echo "$sql\n";
 
@@ -65,6 +67,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
     $id_sindicato = $rs['id_sindicato'];
     $id_tipo_adesao = $rs['id_tipo_adesao'];
     $portabilidade = $rs['portabilidade'];
+    $n_apolice = $rs['n_apolice'];
     $empresarial = 1;
     $acompanhado = 0;
     $id_treinador = 0;
@@ -142,6 +145,28 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
     if ($rs2 = mysqli_fetch_array($selectUltimaParcela)) {
 
+        $sqlBaseComissao = "SELECT 
+                                SUM(base_comissao) AS total
+                            FROM
+                                busca_comissoes
+                            WHERE 
+                                id_finalizado = '$id_finalizado' and id_tipo_comissao = 0 and if(id_operadora <> 3, dental = 0, '')
+                            GROUP BY nome_contrato , parcela , porcentagem , id_operadora , id_conta, if(id_operadora = 4, data_pagamento, '') 
+                            order by parcela desc limit 1;";
+        // echo "$sqlBaseComissao\n";
+        $selectBaseComissao = mysqli_query($conect, $sqlBaseComissao);
+        if ($rsBaseComissao = mysqli_fetch_assoc($selectBaseComissao)) {
+            $valorBaseAtual = $rsBaseComissao['total'];
+            if ($valorBaseAtual >= 200) {
+                echo "Valor Finalizado: $valor_contrato\n";
+                $valor_contrato = $valorBaseAtual;
+                $rs['valor'] = $valorBaseAtual;
+                echo "Valor Busca Comissoes: $valor_contrato\n";
+            }
+        }
+
+        // echo "$sqlBaseComissao **\n";
+
         $parcela = $rs2['ultima_parcela'];
 
         if ($parcela >= 1) {
@@ -182,7 +207,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
 
                     $valor_contrato = $rs['valor'];
 
-                    while ($mesContador <= 12) {
+                    while ($mesContador <= $qttMeses) {
 
                         $parcela_prevista = $parcela + $mesContador;
 
@@ -243,7 +268,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
                 $mesContador = 1;
                 $valor_contrato = $rs['valor'];
 
-                while ($mesContador <= 12) {
+                while ($mesContador <= $qttMeses) {
                     $parcela_prevista = $mesContador;
 
                     $data = date("Y-m-d", strtotime($data_pagamento . " + " . ($mesContador - 1) . " month"));
@@ -612,7 +637,7 @@ function distribuiComissao($rs, $parcela_prevista, $data_pagamento_prevista, $ti
                     ) values ($txt_id_finalizado, $id_operadora, $txt_parcela, '$nome_operadora', '$tipo_transacao', '$descricao $descricao_comissao', $valor_calc_liquid, $pago, '1', '1', '$data_pagamento_prevista', $data_venda)";
                     // echo "$transacao\n";
                     mysqli_query($conect, $transacao) or die(mysqli_error($conect));
-                }else if ($administrativo && $data_venda >= "2021-04-26") {
+                } else if ($administrativo && $data_venda >= "2021-04-26") {
                     //Adicionando todos os outros implantadores
                     $sql_adm = "select u.id_usuario, c.id as id_conta from tbl_usuario as u left join tbl_contas as c on c.id_usuario = u.id_usuario where u.id_nivel = '5' and u.disponibilidade = 1;";
                     $result_adm = mysqli_query($conect, $sql_adm) or die(mysqli_error($conect));
@@ -631,11 +656,11 @@ function distribuiComissao($rs, $parcela_prevista, $data_pagamento_prevista, $ti
                         // echo "$transacao\n";
                         mysqli_query($conect, $transacao) or die(mysqli_error($conect));
                     }
-                }else {
+                } else {
                     $transacao = "INSERT INTO tbl_relatorio_recebimento 
                 (id_finalizado, id_operadora, parcela, operadora, tipo, titulo, valor, pago, empresarial, comissao, data, data_venda
                 ) values ($txt_id_finalizado, $id_operadora, $txt_parcela, '$nome_operadora', '$tipo_transacao', '$descricao $descricao_comissao', $valor_calc_liquid, $pago, '1', '1', '$data_pagamento_prevista', $data_venda)";
-                // echo "$transacao\n";
+                    // echo "$transacao\n";
 
                     mysqli_query($conect, $transacao) or die(mysqli_error($conect));
                 }
