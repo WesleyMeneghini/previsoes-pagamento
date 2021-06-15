@@ -11,6 +11,9 @@ $conect = conexaoMysql();
 $operadoras = array();
 $total = array();
 
+function formatMoeda($number){
+    return number_format($number, 2, ",", ".");
+}
 
 $sqlOperadoras = "SELECT * from tbl_operadora;";
 $selectOperadoras = mysqli_query($conect, $sqlOperadoras);
@@ -55,7 +58,11 @@ if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
 
             $totalMesOperadora = $rs['comissao'];
             if ($totalMesOperadora > 0.0) {
-                $totalOperadora = ['operadora' => $nomeOperadora, 'total' => $totalMesOperadora, 'previsto' => $valorPrevisto];
+                $totalOperadora = [
+                    'operadora' => $nomeOperadora, 
+                    'total' => $totalMesOperadora, 
+                    'previsto' => $valorPrevisto
+                ];
                 array_push($total, $totalOperadora);
                 // echo "$nomeOperadora => R$ $totalMesOperadora\n";
             }
