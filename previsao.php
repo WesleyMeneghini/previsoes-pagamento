@@ -26,7 +26,18 @@ $dataFim = "$anoAtual-$mes-" . cal_days_in_month(CAL_GREGORIAN, $mes, $proximoAn
 // $dataFim = $anoAtual . "-" . "01" . "-" . "30";
 
 
-$sql = "SELECT tbl_finalizado.*, operadora.titulo as nome_operadora FROM tbl_finalizado inner join tbl_operadora as operadora on tbl_finalizado.id_operadora = operadora.id  where (data_pagamento is not null or data_previsao_pagamento is not null) and vitalicio = 0 and id_operadora >= 0  order by id desc;";
+$sql = "SELECT 
+            tbl_finalizado.*, operadora.titulo AS nome_operadora
+        FROM
+            tbl_finalizado
+                INNER JOIN
+            tbl_operadora AS operadora ON tbl_finalizado.id_operadora = operadora.id
+        WHERE
+            (data_pagamento IS NOT NULL
+                OR data_previsao_pagamento IS NOT NULL)
+                AND vitalicio = 0
+                AND id_operadora >= 0
+        ORDER BY id DESC;";
 
 // echo "$sql\n";
 
@@ -55,6 +66,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
     }
 
     $descricao = $rs['razao_social'];
+    $descricao = str_replace("'", ' ', $descricao);
     $valor_contrato = $rs['valor'];
 
 
@@ -212,7 +224,7 @@ while ($rs = mysqli_fetch_assoc($result)) {
                         $parcela_prevista = $parcela + $mesContador;
 
                         $data = date("Y-m-d", strtotime($data_pagamento_operadora . " + $mesContador month"));
-                        $data_pagamento_prevista = calculoData($id_operadora, $data);
+                        $data_pagamento_prevista = calculoData($id_operadora, $data, $parcela_prevista);
 
 
                         // echo "$data_pagamento_prevista, " .  date("w", strtotime($data_pagamento_prevista)) . "\n";
@@ -261,65 +273,63 @@ while ($rs = mysqli_fetch_assoc($result)) {
                 }
             }
         } else {
-            if (false) {
-                if ($log)
-                    echo "AINDA NÃO TEM PAGAMENTOS (Previsão a partir da 1ª parcela)\n";
+            if ($log)
+                echo "AINDA NÃO TEM PAGAMENTOS (Previsão a partir da 1ª parcela)\n";
 
-                $mesContador = 1;
-                $valor_contrato = $rs['valor'];
+            $mesContador = 1;
+            $valor_contrato = $rs['valor'];
 
-                while ($mesContador <= $qttMeses) {
-                    $parcela_prevista = $mesContador;
+            while ($mesContador <= $qttMeses) {
+                $parcela_prevista = $mesContador;
 
-                    $data = date("Y-m-d", strtotime($data_pagamento . " + " . ($mesContador - 1) . " month"));
-                    $data_pagamento_prevista = calculoData($id_operadora, $data);
+                $data = date("Y-m-d", strtotime($data_pagamento . " + " . ($mesContador - 1) . " month"));
+                $data_pagamento_prevista = calculoData($id_operadora, $data, $parcela_prevista);
 
 
-                    $sqlPorcentagem = "select sum(porcentagem) as porcentagem, parcela from tbl_porcentagem_comissoes where id_operadora = $id_operadora and if($parcela_prevista > 6, parcela = 6, parcela = $parcela_prevista);";
+                $sqlPorcentagem = "SELECT sum(porcentagem) as porcentagem, parcela from tbl_porcentagem_comissoes where id_operadora = $id_operadora and if($parcela_prevista > 6, parcela = 6, parcela = $parcela_prevista);";
 
-                    $selectporcentagem = mysqli_query($conect, $sqlPorcentagem);
-                    if ($rsPorcentagem = mysqli_fetch_assoc($selectporcentagem)) {
-                        $porcentagem = $rsPorcentagem['porcentagem'];
-                    }
-                    $rs['valor'] = $valor_contrato * ($porcentagem / 100);
+                $selectporcentagem = mysqli_query($conect, $sqlPorcentagem);
+                if ($rsPorcentagem = mysqli_fetch_assoc($selectporcentagem)) {
+                    $porcentagem = $rsPorcentagem['porcentagem'];
+                }
+                $rs['valor'] = $valor_contrato * ($porcentagem / 100);
 
-                    $transacao = "INSERT INTO tbl_relatorio_recebimento (id_finalizado, id_operadora, parcela, operadora, tipo, titulo, valor, pago, empresarial, comissao, data, data_venda) values ($id_finalizado, $id_operadora, $parcela_prevista, '$nome_operadora', '', '$descricao', " . $rs['valor'] . ", 0, '1', '0', '$data_pagamento_prevista', $data_venda)";
-                    // echo "$transacao\n";
+                $transacao = "INSERT INTO tbl_relatorio_recebimento (id_finalizado, id_operadora, parcela, operadora, tipo, titulo, valor, pago, empresarial, comissao, data, data_venda) values ($id_finalizado, $id_operadora, $parcela_prevista, '$nome_operadora', '', '$descricao', " . $rs['valor'] . ", 0, '1', '0', '$data_pagamento_prevista', $data_venda)";
+                // echo "$transacao\n";
 
-                    $sqlTransacoes = "SELECT count(id) as qtt FROM tbl_relatorio_recebimento WHERE id_finalizado = $id_finalizado and parcela = $parcela_prevista and id_operadora = $id_operadora;";
+                $sqlTransacoes = "SELECT count(id) as qtt FROM tbl_relatorio_recebimento WHERE id_finalizado = $id_finalizado and parcela = $parcela_prevista and id_operadora = $id_operadora;";
 
-                    $selectTransacoes = mysqli_query($conect, $sqlTransacoes);
-                    if ($selectTransacoes === false) {
-                        die(mysqli_error($conect));
-                    }
+                $selectTransacoes = mysqli_query($conect, $sqlTransacoes);
+                if ($selectTransacoes === false) {
+                    die(mysqli_error($conect));
+                }
 
-                    // Verificar se o registro ja existe no sistema
-                    if ($rsTransacao = mysqli_fetch_assoc($selectTransacoes)) {
+                // Verificar se o registro ja existe no sistema
+                if ($rsTransacao = mysqli_fetch_assoc($selectTransacoes)) {
 
-                        if ($rsTransacao['qtt'] == 0) {
+                    if ($rsTransacao['qtt'] == 0) {
 
-                            if ($salvar)
-                                mysqli_query($conect, $transacao);
+                        if ($salvar)
+                            mysqli_query($conect, $transacao);
 
-                            if ($parcela_prevista <= 3) {
+                        if ($parcela_prevista <= 3) {
 
-                                distribuiComissao($rs, $parcela_prevista, $data_pagamento_prevista, "", 0);
-                            }
+                            distribuiComissao($rs, $parcela_prevista, $data_pagamento_prevista, "", 0);
                         }
                     }
-
-
-                    $rs['valor'] = $valor_contrato;
-
-                    $mesContador++;
                 }
+
+
+                $rs['valor'] = $valor_contrato;
+
+                $mesContador++;
             }
         }
     }
 }
 
 
-function calculoData($id_operadora, $data_pagamento)
+function calculoData($id_operadora, $data_pagamento, $parcela)
 {
     global $log;
     $data_pagamento_prevista = $data_pagamento;
@@ -332,7 +342,7 @@ function calculoData($id_operadora, $data_pagamento)
     if ($log)
         echo "\nData inicial:  $data_pagamento_prevista ** Dia da semana ($diaDaSemana)\n";
 
-    if ($id_operadora == 1) {
+    if ($id_operadora == 1 && $parcela >= 2) {
 
         if ($dia < 15) {
             if ($mes == 2) {
@@ -359,6 +369,14 @@ function calculoData($id_operadora, $data_pagamento)
             $baseDia = $baseDia + (5 - $diaDaSemana);
         }
         $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +$baseDia days"));
+    } elseif( $id_operadora == 1 && $parcela == 1) {
+        $count = 1;
+        while ($count <= 5) {
+            $data_pagamento_prevista = date("Y-m-d", strtotime($data_pagamento_prevista . " +1 days"));
+            if (date("w", strtotime($data_pagamento_prevista)) != 0 && date("w", strtotime($data_pagamento_prevista)) != 6) {
+                $count++;
+            }
+        }
     } else {
         $count = 1;
         while ($count <= 3) {
@@ -413,6 +431,7 @@ function distribuiComissao($rs, $parcela_prevista, $data_pagamento_prevista, $ti
 
     $valor_calc = $rs['valor'];
     $descricao = $rs['razao_social'];
+    $descricao = str_replace("'", ' ', $descricao);
     $txt_parcela = $parcela_prevista;
     $txt_id_finalizado = $rs['id'];
     $nome_operadora = $rs['nome_operadora'];
