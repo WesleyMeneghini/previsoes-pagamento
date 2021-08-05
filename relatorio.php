@@ -18,21 +18,31 @@ function formatMoeda($number)
 
 $conect = conexaoMysql();
 
-
 $operadoras = array();
-
-$sqlOperadoras = "SELECT * from tbl_operadora;";
-$selectOperadoras = mysqli_query($conect, $sqlOperadoras);
-while ($rsOperadora = mysqli_fetch_assoc($selectOperadoras)) {
-    array_push($operadoras, $rsOperadora);
-}
-
 
 if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
 
     $html = "";
 
     if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
+
+        $idOperadoraSelect = $_GET['id_operadora'];
+        $pesquisaOperadora = "";
+
+        if (intval($idOperadoraSelect) > 0) {
+            $selecionarOperadora = "WHERE id = $idOperadoraSelect;";
+            $pesquisaOperadora = "AND id_operadora = $idOperadoraSelect";
+            $pesquisaOperadoraTeste = "id_operadora = $idOperadoraSelect";
+        }else{
+            $pesquisaOperadoraTeste = "id_operadora > 0";
+        }
+
+        $sqlOperadoras = "SELECT * from tbl_operadora $selecionarOperadora;";
+
+        $selectOperadoras = mysqli_query($conect, $sqlOperadoras);
+        while ($rsOperadora = mysqli_fetch_assoc($selectOperadoras)) {
+            array_push($operadoras, $rsOperadora);
+        }
 
         $dataInicial = $_GET['data_inicial'];
         $dataFinal = $_GET['data_final'];
@@ -55,11 +65,12 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
                             busca_comissoes 
                         WHERE
                             (data_pagamento BETWEEN $pesquisaPorDatas)
-                                AND dental >= 0 ) AS valor_total_pago_mes
+                                AND dental >= 0 $pesquisaOperadora
+                    ) AS valor_total_pago_mes
                     FROM
                         tbl_relatorio_recebimento as relatorio INNER JOIN tbl_finalizado as f on relatorio.id_finalizado = f.id
                     WHERE
-                        (relatorio.data BETWEEN $pesquisaPorDatas) AND comissao = 0 AND f.vitalicio = 0;";
+                        (relatorio.data BETWEEN $pesquisaPorDatas) AND comissao = 0 AND f.vitalicio = 0 AND relatorio.$pesquisaOperadoraTeste;";
 
         $selectTotalMes = mysqli_query($conect, $sqlTotalMes);
         if ($rsTotalMes = mysqli_fetch_assoc($selectTotalMes)) {
@@ -93,7 +104,7 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
 
             $dataPesquisa = date("Y-m-d", strtotime($dataInicial . " +$count days"));
 
-            $sql = "SELECT id FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0";
+            $sql = "SELECT id FROM tbl_relatorio_recebimento WHERE data = '$dataPesquisa' and comissao = 0 $pesquisaOperadora";
             $select = mysqli_query($conect, $sql);
 
             if (mysqli_num_rows($select) > 0) {
@@ -106,11 +117,13 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
                                         busca_comissoes
                                     WHERE
                                         data_pagamento = '$dataPesquisa'
-                                            AND dental = 0) AS valor_total_pago_dia
+                                            AND dental = 0
+                                            $pesquisaOperadora
+                                ) AS valor_total_pago_dia
                             FROM
                                 tbl_relatorio_recebimento
                             WHERE
-                                data = '$dataPesquisa' AND comissao = 0;";
+                                data = '$dataPesquisa' AND comissao = 0 $pesquisaOperadora;";
                 $selectTotalDia = mysqli_query($conect, $sqlTotalDia);
                 if ($rsTotalDia = mysqli_fetch_assoc($selectTotalDia)) {
                     $valorTotalPrevistoDia = $rsTotalDia['valor_total_dia_previsto'];
@@ -284,7 +297,7 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
                         $html .= "
                                 </tbody>
                             </table>
-                            <h6>Total pago do previsto R$ ".formatMoeda($totalPagoComPrevisto)." </h6>
+                            <h6>Total pago do previsto R$ " . formatMoeda($totalPagoComPrevisto) . " </h6>
                         </div>
                     </li>
                     ";
@@ -314,7 +327,7 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "previsto") {
 
 
 if (isset($_GET['tipo']) && $_GET['tipo'] == "pago") {
-    
+
     $html = "";
 
     if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
@@ -579,7 +592,7 @@ if (isset($_GET['tipo']) && $_GET['tipo'] == "pago") {
         }
 
         $html .= "</ul>";
-    }else{
+    } else {
         echo "Falta selecionar o periodo";
     }
 

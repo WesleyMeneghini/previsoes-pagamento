@@ -27,6 +27,28 @@
             $('.modal').modal();
         });
 
+        // const adicionarOption = () => {
+
+        // }
+
+        $(document).ready(function(){
+            $.ajax({
+                url: "select_operadoras.php",
+                type: 'GET',
+                data: {
+                    "id": 0,
+                },
+                
+            }).done( function(res) {
+                var operadoras =  JSON.parse(res);
+                // console.log(operadoras);
+                operadoras.forEach(operadora => {
+                    $('#slc_operadora').append(`<option value='${operadora.id}'>${operadora.titulo}</option>`);
+                })
+                    
+            });
+        })
+
         // Efeito para abrir e fechar as informaçoes do lançamento das comissoes
         const openCollapsible = () => {
             $(document).ready(function() {
@@ -57,13 +79,14 @@
             });
         }
 
-        const relatorioPeriodo = (dataInicial, dataFinal, tipo) => {
+        const relatorioPeriodo = (dataInicial, dataFinal, tipo, idOperadora) => {
             $.ajax({
                 url: "relatorio.php",
                 type: 'GET',
                 data: {
                     "data_inicial": dataInicial,
                     "data_final": dataFinal,
+                    "id_operadora": idOperadora,
                     "tipo": tipo,
                 },
                 beforeSend: function() {
@@ -76,16 +99,18 @@
             });
         }
 
-        const totalOperadoras = (dataInicial, dataFinal) => {
+        const totalOperadoras = (dataInicial, dataFinal, idOperadora) => {
             $.ajax({
                 url: "total_operadoras.php",
                 type: 'GET',
                 data: {
                     "data_inicial": dataInicial,
-                    "data_final": dataFinal
+                    "data_final": dataFinal,
+                    "id_operadora": idOperadora
                 },
                 beforeSend: function() {
-                    $("#resultado").html(loaderCircle());
+                    $("#resultado_total_operadoras").html(loaderCircle());
+                    relatorioPeriodo(dataInicial, dataFinal, "previsto", idOperadora);
                 }
             }).done(function(msg) {
                 let res = JSON.parse(msg);
@@ -147,16 +172,22 @@
 
         <div class="row">
             <form>
-                <div class="input-field col s5 ">
-                    <input type="date" id="data_inicial" name="data_inicial" value="<?= date("Y-05-01") ?>">
+                <div class="input-field col s3 ">
+                    <input type="date" id="data_inicial" name="data_inicial" value="<?= date("Y-07-01") ?>">
 
                     <label>Data inicial</label>
                 </div>
-                <div class="input-field col s5 ">
-                    <input type="date" id="data_final" name="data_final" value="<?= date("Y-05-31") ?>">
+                <div class="input-field col s3 ">
+                    <input type="date" id="data_final" name="data_final" value="<?= date("Y-07-31") ?>">
                     <label>Data Final</label>
                 </div>
-                <div class="input-field col s1 ">
+                <div class="input-field col s2">
+                    <select class="browser-default" id="slc_operadora">
+                        <option value="0" selected>Selecione uma Operadora</option>
+                    </select>
+                    
+                </div>
+                <div class="input-field col s3 ">
                     <!-- Switch -->
                     <div class="switch">
                         <label>
@@ -184,19 +215,24 @@
             e.preventDefault();
             const $dataInicial = $("#data_inicial").val();
             const $dataFinal = $("#data_final").val();
+            const $idOperadora = $("#slc_operadora").val();
             const $pagoPrevisto = $("#pago_previsto");
             let tipo = "";
+
+            console.log($idOperadora);
 
             if ($dataFinal < $dataInicial) {
                 alert("Data inicial não pode ser maior que a final!");
             } else {
-                if($pagoPrevisto.is(":checked")){
+                if ($pagoPrevisto.is(":checked")) {
                     tipo = "pago";
-                }else{
+                } else {
                     tipo = "previsto";
                 }
-                relatorioPeriodo($dataInicial, $dataFinal, tipo);
-                totalOperadoras($dataInicial, $dataFinal);
+
+                // relatorioPeriodo($dataInicial, $dataFinal, tipo);
+
+                totalOperadoras($dataInicial, $dataFinal, $idOperadora);
             }
         });
     </script>

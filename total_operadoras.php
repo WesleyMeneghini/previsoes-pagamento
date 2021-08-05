@@ -16,13 +16,24 @@ function formatMoeda($number)
     return number_format($number, 2, ",", ".");
 }
 
-$sqlOperadoras = "SELECT * from tbl_operadora;";
-$selectOperadoras = mysqli_query($conect, $sqlOperadoras);
-while ($rsOperadora = mysqli_fetch_assoc($selectOperadoras)) {
-    array_push($operadoras, $rsOperadora);
-}
+
+
 
 if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
+
+    $idOperadoraSelect = $_GET['id_operadora'];
+
+    if (intval($idOperadoraSelect) > 0) {
+        $selecionarOperadora = "WHERE id = $idOperadoraSelect;";
+    }
+
+    $sqlOperadoras = "SELECT * from tbl_operadora $selecionarOperadora;";
+
+    $selectOperadoras = mysqli_query($conect, $sqlOperadoras);
+    while ($rsOperadora = mysqli_fetch_assoc($selectOperadoras)) {
+        array_push($operadoras, $rsOperadora);
+    }
+
 
     $dataInicial = $_GET['data_inicial'];
     $dataFinal = $_GET['data_final'];
@@ -50,7 +61,7 @@ if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
         if ($rsPago = mysqli_fetch_assoc($select)) {
             $valorPagoPeriodoOperadora = $rsPago['comissao'];
         }
-        
+
         $sqlPrevisto = "SELECT 
                             sum(valor) as valor_previsto 
                         from 
@@ -61,13 +72,13 @@ if (isset($_GET['data_inicial']) && isset($_GET['data_final'])) {
 
         $selectPrevisto = mysqli_query($conect, $sqlPrevisto);
 
-        
+
         if ($rsPrevisto = mysqli_fetch_assoc($selectPrevisto)) {
             $valorPrevistoPeriodoOperadora = $rsPrevisto['valor_previsto'];
         }
 
         if ($valorPagoPeriodoOperadora > 0.0 || $valorPrevistoPeriodoOperadora > 0.0) {
-            
+
             if ($valorPagoPeriodoOperadora == null) {
                 $valorPagoPeriodoOperadora = 0;
             }
